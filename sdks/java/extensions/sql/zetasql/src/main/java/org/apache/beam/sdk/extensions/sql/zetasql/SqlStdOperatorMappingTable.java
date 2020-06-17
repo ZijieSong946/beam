@@ -109,6 +109,13 @@ public class SqlStdOperatorMappingTable {
           FunctionSignatureId.FN_UNIX_DATE, // unix_date
           FunctionSignatureId.FN_DATE_FROM_UNIX_DATE, // date_from_unix_date
 
+          // Time functions
+          FunctionSignatureId.FN_TIME_ADD, // time_add
+          FunctionSignatureId.FN_TIME_SUB, // time_sub
+          FunctionSignatureId.FN_TIME_FROM_HOUR_MINUTE_SECOND, // time
+          FunctionSignatureId.FN_TIME_FROM_TIMESTAMP, // time
+          FunctionSignatureId.FN_TIME_FROM_DATETIME, // time
+
           // Timestamp functions
           FunctionSignatureId.FN_CURRENT_TIMESTAMP, // current_timestamp
           FunctionSignatureId.FN_EXTRACT_FROM_TIMESTAMP, // $extract

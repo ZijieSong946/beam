@@ -18,19 +18,15 @@
 package org.apache.beam.sdk.extensions.sql.zetasql;
 
 import com.google.protobuf.ByteString;
-import com.google.zetasql.ArrayType;
-import com.google.zetasql.StructType;
+import com.google.zetasql.*;
 import com.google.zetasql.StructType.StructField;
-import com.google.zetasql.Type;
-import com.google.zetasql.TypeFactory;
-import com.google.zetasql.Value;
 import com.google.zetasql.ZetaSQLType.TypeKind;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.beam.sdk.annotations.Internal;
-import org.apache.beam.sdk.extensions.sql.impl.utils.CalciteUtils.TimeType;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.Schema.Field;
 import org.apache.beam.sdk.schemas.Schema.FieldType;
@@ -66,6 +62,8 @@ public final class ZetaSqlUtils {
         return SqlTypeName.VARCHAR;
       case TYPE_DATE:
         return SqlTypeName.DATE;
+      case TYPE_TIME:
+        return SqlTypeName.TIME;
       case TYPE_TIMESTAMP:
         return SqlTypeName.TIMESTAMP;
       case TYPE_BOOL:
@@ -124,10 +122,13 @@ public final class ZetaSqlUtils {
     return new StructField(field.getName(), beamFieldTypeToZetaSqlType(field.getType()));
   }
 
+  // Specific logical type conversion: Beam => ZetaSQL
   private static Type beamLogicalTypeToZetaSqlType(String identifier) {
     if (SqlTypes.DATE.getIdentifier().equals(identifier)) {
+      // Date type
       return TypeFactory.createSimpleType(TypeKind.TYPE_DATE);
-    } else if (TimeType.IDENTIFIER.equals(identifier)) {
+    } else if (SqlTypes.TIME.getIdentifier().equals(identifier)) {
+      // Time type
       return TypeFactory.createSimpleType(TypeKind.TYPE_TIME);
     } else {
       throw new UnsupportedOperationException("Unknown Beam logical type: " + identifier);
@@ -196,15 +197,24 @@ public final class ZetaSqlUtils {
     return Value.createStructValue(beamSchemaToZetaSqlStructType(schema), values);
   }
 
+  // Specific logical value conversion: Beam => ZetaSQL
   private static Value beamLogicalObjectToZetaSqlValue(String identifier, Object object) {
     if (SqlTypes.DATE.getIdentifier().equals(identifier)) {
+      // Date value
       if (object instanceof Long) { // base type
         return Value.createDateValue(((Long) object).intValue());
       } else { // input type
         return Value.createDateValue((int) ((LocalDate) object).toEpochDay());
       }
+    } else if (SqlTypes.TIME.getIdentifier().equals(identifier)) {
+      // Time value
+      if (object instanceof Long) { // base type
+        return Value.createTimeValue((long) object);
+      } else { // input type
+        return Value.createTimeValue(((LocalTime) object).toNanoOfDay());
+      }
     } else {
-      throw new UnsupportedOperationException("Unknown Beam logical type: " + identifier);
+        throw new UnsupportedOperationException("Unknown Beam logical type: " + identifier);
     }
   }
 
@@ -274,9 +284,14 @@ public final class ZetaSqlUtils {
     return row;
   }
 
+  // Specific logical value conversion: ZetaSQL => Beam
   private static Object zetaSqlValueToBeamLogicalObject(String identifier, Value value) {
     if (SqlTypes.DATE.getIdentifier().equals(identifier)) {
+      // Date value
       return LocalDate.ofEpochDay(value.getDateValue());
+    } else if (SqlTypes.TIME.getIdentifier().equals(identifier)) {
+      // Time value
+      return CivilTimeEncoder.decodePacked64TimeNanosAsJavaTime(value.getTimeValue());
     } else {
       throw new UnsupportedOperationException("Unknown Beam logical type: " + identifier);
     }
